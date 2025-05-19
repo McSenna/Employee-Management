@@ -9,7 +9,7 @@ const About = () => {
             role: "CEO & Founder",
             bio: "Visionary leader with 15+ years in HR technology and operations management.",
             color: "bg-blue-600",
-            image: null
+            image: "/10.jpeg"
         },
         {
             id: 2,

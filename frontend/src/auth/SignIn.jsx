@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Eye, EyeOff, User, UserCog, X } from 'lucide-react';
+import { Eye, EyeOff, User, X } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 const SignInModal = ({ isOpen, onClose }) => {
-  const [isAdmin, setIsAdmin] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -34,71 +33,95 @@ const SignInModal = ({ isOpen, onClose }) => {
     }
   };
 
+  const resetForm = () => {
+    setEmail("");
+    setPassword("");
+    setErrorMessage("");
+    setSuccessMessage("");
+  };
+
   const handleSubmit = async () => {
     setErrorMessage("");
     setSuccessMessage("");
     setIsLoading(true);
 
-    const adminEmail = "admin@gmail.com";
-    const adminPassword = "admin123";
-
     try {
-      if (isAdmin) {
-        if (email === adminEmail && password === adminPassword) {
-          setSuccessMessage(alert('admin successfully logged in!!'));
-          navigate('/admin-layout')
-          
-          setTimeout(() => {
-            if (onClose) onClose();
-          }, 1500);
-        } else {
-          setErrorMessage("Invalid admin credentials!");
+      // Validation
+      if (!email) {
+        alert("Email is required");
+        setIsLoading(false);
+        return;
+      }
+      
+      if (!password || password.length < 6) {
+        alert("Password must be at least 6 characters");
+        setIsLoading(false);
+        return;
+      }
+
+      const response = await axios.post('http://localhost/employee-management-system/backend/api.php?action=login', 
+        {
+          email: email,
+          password: password
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
         }
-      } else {
-        if (!email || password.length < 6) {
-          setErrorMessage(alert("Invalid email or password (must be at least 6 characters)"));
+      );
+      // alert("Login successful");
+      console.log("Login response:", response.data);
+
+      if (response.data.error) {
+        alert(response.data.message || "Login failed");
+        setIsLoading(false);
+        return;
+      }
+
+      if (response.data.employee) {
+        const { employee } = response.data;
+        
+        if (!employee.id || !employee.role) {
+          alert("Invalid user data received");
+          console.error("Invalid user data:", employee);
           setIsLoading(false);
           return;
         }
+        
+        localStorage.setItem("employee_id", employee.id);
+        localStorage.setItem("userRole", employee.role);
+        localStorage.setItem("username", employee.full_name || employee.first_name || "User");
+        localStorage.setItem("isLoggedIn", "true");
 
-        try {
-          const response = await axios.get('api.php?action=login', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            data: JSON.stringify({
-              email: email,
-              password: password
-            })
-          });
-  
-          if (response.data.error) {
-            setErrorMessage(response.data.message);
-          } else {
-            setSuccessMessage(alert("User login successful!"));
-            navigate('/user-layout')
-            setTimeout(() => {
-              if (onClose) onClose();
-            }, 1500);
-          }
-        } catch (error) {
-          setErrorMessage(`Login failed: ${error.message}`);
+        let dashboardRoute = '/user-layout'; 
+        switch(employee.role) {
+          case "admin":
+            dashboardRoute = '/admin-layout';
+            break;
+          case "hr":
+            dashboardRoute = '/hr-layout';
+            break;
         }
+
+        if (onClose) onClose();
+        
+        setTimeout(() => {
+          navigate(dashboardRoute);
+        }, 100);
+      } else {
+        alert("Unexpected response from server");
+        console.error("Unexpected response:", response.data);
       }
     } catch (error) {
-      setErrorMessage(`Login failed: ${error.message}`);
+      console.error("Login error:", error);
+      alert (error.response?.data?.message || 
+                       error.message || 
+                       "Login failed. Please try again.");
+      setErrorMessage(alert);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const toggleUserType = () => {
-    setIsAdmin(!isAdmin);
-    setEmail("");
-    setPassword("");
-    setErrorMessage("");
-    setSuccessMessage("");
   };
 
   if (!isOpen) return null;
@@ -108,7 +131,7 @@ const SignInModal = ({ isOpen, onClose }) => {
       className="fixed inset-0 bg-transparent backdrop-blur-sm bg-opacity-50 flex items-center justify-center p-4 z-50"
       onClick={handleBackdropClick}
     >
-      <div className=" bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="bg-blue-600 p-4 text-white flex justify-between items-center">
           <h2 className="text-xl font-bold">Sign In</h2>
           {onClose && (
@@ -121,42 +144,24 @@ const SignInModal = ({ isOpen, onClose }) => {
             </button>
           )}
         </div>
-
-        <div className="flex border-b">
-          <button
-            onClick={() => toggleUserType()}
-            className={`flex-1 py-3 flex items-center justify-center gap-2 ${
-              !isAdmin ? 'bg-blue-100 text-blue-600 font-medium' : 'text-gray-600'
-            }`}
-          >
-            <User size={18} />
-            <span>User</span>
-          </button>
-          <button
-            onClick={() => toggleUserType()}
-            className={`flex-1 py-3 flex items-center justify-center gap-2 ${
-              isAdmin ? 'bg-blue-100 text-blue-600 font-medium' : 'text-gray-600'
-            }`}
-          >
-            <UserCog size={18} />
-            <span>Admin</span>
-          </button>
+        
+        <div className="flex justify-center border-b bg-blue-50 py-3">
+          <div className="flex items-center gap-2 text-blue-600">
+            <User size={20} />
+            <span className="font-medium">Account Login</span>
+          </div>
         </div>
 
         {/* Form Content */}
         <div className="p-6 space-y-4">
+          
+          {/* Display error message if exists */}
           {errorMessage && (
-            <div className="text-red-600 bg-red-50 p-3 rounded text-sm">
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
               {errorMessage}
             </div>
           )}
-
-          {successMessage && (
-            <div className="text-green-600 bg-green-50 p-3 rounded text-sm">
-              {successMessage}
-            </div>
-          )}
-
+          
           <div className="space-y-2">
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
               Email Address
@@ -168,6 +173,12 @@ const SignInModal = ({ isOpen, onClose }) => {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Enter your email"
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  document.getElementById('password').focus();
+                }
+              }}
             />
           </div>
 
@@ -183,6 +194,12 @@ const SignInModal = ({ isOpen, onClose }) => {
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Enter your password"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSubmit();
+                  }
+                }}
               />
               <button
                 type="button"
@@ -220,15 +237,6 @@ const SignInModal = ({ isOpen, onClose }) => {
           >
             {isLoading ? "Signing In..." : "Sign In"}
           </button>
-
-          {/* {!isAdmin && (
-            <div className="text-center text-sm text-gray-600 mt-4">
-              Don't have an account?{" "}
-              <button className="text-blue-600 hover:text-blue-500">
-                Sign up
-              </button>
-            </div>
-          )} */}
           
         </div>
       </div>
