@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { User, Mail, Briefcase, Calendar, Clock, Award, Building, Phone, MapPin } from 'lucide-react';
+import { User, Mail, Briefcase, Calendar, Clock, Award, Building, Phone, MapPin, Pencil } from 'lucide-react';
+import UserEditProfileModal from '../components/UserEditProfileModal';
 
 const UserProfile = () => {
     const [userData, setUserData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     useEffect(() => {
         const fetchUserProfile = async () => {
@@ -44,6 +46,11 @@ const UserProfile = () => {
         
         fetchUserProfile();
     }, []);
+
+    const handleProfileUpdate = (updatedUserData) => {
+        setUserData(updatedUserData);
+        fetchUserProfile(); // Refresh the profile data
+    };
 
     if (loading) {
         return (
@@ -154,10 +161,28 @@ const UserProfile = () => {
                                         <Calendar size={16} className="mr-3 text-blue-500" />
                                         <span>ID: {userData.employee_id}</span>
                                     </div>
+
+                                    {userData.phone && (
+                                        <div className="flex items-center text-gray-700">
+                                            <Phone size={16} className="mr-3 text-blue-500" />
+                                            <span>{userData.phone}</span>
+                                        </div>
+                                    )}
+
+                                    {userData.address && (
+                                        <div className="flex items-center text-gray-700">
+                                            <MapPin size={16} className="mr-3 text-blue-500" />
+                                            <span>{userData.address}</span>
+                                        </div>
+                                    )}
                                 </div>
                                 
-                                <button className="mt-8 w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition duration-300 flex items-center justify-center">
-                                    <span className="mr-2">Edit Profile</span>
+                                <button 
+                                    onClick={() => setIsEditModalOpen(true)}
+                                    className="mt-8 w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition duration-300 flex items-center justify-center"
+                                >
+                                    <Pencil size={16} className="mr-2" />
+                                    <span>Edit Profile</span>
                                 </button>
                             </div>
                         </div>
@@ -243,6 +268,14 @@ const UserProfile = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Edit Profile Modal */}
+            <UserEditProfileModal
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                userData={userData}
+                onUpdate={handleProfileUpdate}
+            />
         </div>
     );
 };

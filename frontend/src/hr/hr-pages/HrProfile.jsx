@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { User, Mail, Briefcase, Calendar, Clock, Award, Building, Phone, MapPin } from 'lucide-react';
+import { User, Mail, Briefcase, Calendar, Clock, Award, Building, Phone, MapPin, Pencil } from 'lucide-react';
+import HrEditProfileModal from '../components/HrEditProfileModal';
 
 const HrProfile = () => {
     const [userData, setUserData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     useEffect(() => {
         const fetchUserProfile = async () => {
@@ -45,6 +47,20 @@ const HrProfile = () => {
         fetchUserProfile();
     }, []);
 
+    const handleProfileUpdate = (updatedUserData) => {
+        setUserData(updatedUserData);
+    };
+
+    // Function to check if the profile picture URL is valid
+    const isValidUrl = (url) => {
+        if (!url) return false;
+        // Check if it's a valid URL format (very basic check)
+        return url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/');
+    };
+
+    // Get profile picture or use default
+    const profilePicture = isValidUrl(userData?.profile_picture) ? userData.profile_picture : null;
+
     if (loading) {
         return (
             <div className="flex items-center justify-center h-screen bg-gray-100">
@@ -78,16 +94,6 @@ const HrProfile = () => {
             </div>
         );
     }
-
-    // Function to check if the profile picture URL is valid
-    const isValidUrl = (url) => {
-        if (!url) return false;
-        // Check if it's a valid URL format (very basic check)
-        return url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/');
-    };
-
-    // Get profile picture or use default
-    const profilePicture = isValidUrl(userData.profile_picture) ? userData.profile_picture : null;
 
     return (
         <div className="min-h-screen bg-gray-100 py-8 px-4">
@@ -154,10 +160,21 @@ const HrProfile = () => {
                                         <Calendar size={16} className="mr-3 text-blue-500" />
                                         <span>ID: {userData.employee_id}</span>
                                     </div>
+
+                                    {userData.phone && (
+                                        <div className="flex items-center text-gray-700">
+                                            <Phone size={16} className="mr-3 text-blue-500" />
+                                            <span>{userData.phone}</span>
+                                        </div>
+                                    )}
                                 </div>
                                 
-                                <button className="mt-8 w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition duration-300 flex items-center justify-center">
-                                    <span className="mr-2">Edit Profile</span>
+                                <button 
+                                    onClick={() => setIsEditModalOpen(true)}
+                                    className="mt-8 w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition duration-300 flex items-center justify-center"
+                                >
+                                    <Pencil size={16} className="mr-2" />
+                                    <span>Edit Profile</span>
                                 </button>
                             </div>
                         </div>
@@ -243,6 +260,14 @@ const HrProfile = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Edit Profile Modal */}
+            <HrEditProfileModal
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                userData={userData}
+                onUpdate={handleProfileUpdate}
+            />
         </div>
     );
 };

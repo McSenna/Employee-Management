@@ -1,6 +1,6 @@
 import axios from 'axios';
 import React, { useEffect, useRef, useState } from 'react';
-import { Edit, Trash2, File, Calendar, FileText, Search } from 'lucide-react';
+import { Edit, Trash2, File, Calendar, FileText, Search, User } from 'lucide-react';
 
 const AdminEmployeeFiles = () => {
     const [files, setFiles] = useState([]);
@@ -52,7 +52,8 @@ const AdminEmployeeFiles = () => {
 
     const filteredFiles = files.filter(file =>
         file.file_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        file.description?.toLowerCase().includes(searchTerm.toLowerCase())
+        file.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        file.employee_name?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const getFileIcon = (fileType) => {
@@ -64,6 +65,25 @@ const AdminEmployeeFiles = () => {
         if (fileType.includes('spreadsheet')) return <FileText className="text-green-500" />;
         
         return <File className="text-gray-400" />;
+    };
+
+    const formatFileSize = (bytes) => {
+        if (!bytes) return 'N/A';
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(1024));
+        return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
+    };
+
+    const formatDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
     };
 
     if (isLoading) {
@@ -84,13 +104,18 @@ const AdminEmployeeFiles = () => {
     return (
         <div className="min-h-screen bg-gray-50 p-6">
             <div className="max-w-7xl mx-auto">
+                {/* Header */}
+                <div className="mb-6">
+                    <h1 className="text-2xl font-bold text-gray-800">Employee Files</h1>
+                    <p className="text-gray-600 mt-1">Manage and track all employee files</p>
+                </div>
 
                 {/* Search Bar */}
-                <div className="mb-10 ml-220">
+                <div className="mb-6">
                     <div className="relative max-w-md">
                         <input
                             type="text"
-                            placeholder="Search files..."
+                            placeholder="Search files by name, description, or employee..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -101,63 +126,94 @@ const AdminEmployeeFiles = () => {
                     </div>
                 </div>
 
-                {/* Files Grid */}
-                {filteredFiles.length === 0 ? (
-                    <div className="bg-white p-8 rounded shadow-md text-center">
-                        <File className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                        <p className="text-gray-500">No files found</p>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {filteredFiles.map((file, index) => (
-                            <div
-                                key={file.id || index}
-                                className="bg-white p-5 rounded shadow-md hover:shadow-lg transition-shadow duration-300"
-                            >
-                                <div className="flex items-center mb-4">
-                                    <div className="mr-3">
-                                        {getFileIcon(file.file_type)}
-                                    </div>
-                                    <h3 className="text-lg font-medium text-gray-800 truncate">
-                                        {file.file_name}
-                                    </h3>
-                                </div>
-
-                                <div className="space-y-2 mb-4 text-sm">
-                                    <div className="flex items-center text-gray-500">
-                                        <FileText className="w-4 h-4 mr-2 text-gray-400" />
-                                        <span className="truncate">{file.file_type || 'Unknown type'}</span>
-                                    </div>
-                                    <div className="flex items-center text-gray-500">
-                                        <File className="w-4 h-4 mr-2 text-gray-400" />
-                                        <span className="truncate">{file.description || 'No description'}</span>
-                                    </div>
-                                    <div className="flex items-center text-gray-500">
-                                        <Calendar className="w-4 h-4 mr-2 text-gray-400" />
-                                        <span>{file.uploaded_at || 'Unknown date'}</span>
-                                    </div>
-                                </div>
-
-                                <div className="flex space-x-2 pt-3 border-t border-gray-100">
-                                    <button
-                                        onClick={() => handleEdit(file)}
-                                        className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1.5 rounded text-sm flex items-center justify-center transition-colors duration-200"
-                                    >
-                                        <Edit className="w-4 h-4 mr-1" />
-                                        <span>Edit</span>
-                                    </button>
-                                    <button
-                                        onClick={() => handleDelete(file.id)}
-                                        className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1.5 rounded text-sm flex items-center justify-center transition-colors duration-200"
-                                    >
-                                        <Trash2 className="w-4 h-4 mr-1" />
-                                        <span>Delete</span>
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
+                {/* Files Table */}
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                    {filteredFiles.length === 0 ? (
+                        <div className="p-8 text-center">
+                            <File className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                            <p className="text-gray-500">No files found</p>
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">File</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Size</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Upload Date</th>
+                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {filteredFiles.map((file, index) => (
+                                        <tr key={file.id || index} className="hover:bg-gray-50">
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="flex items-center">
+                                                    <div className="flex-shrink-0">
+                                                        {getFileIcon(file.file_type)}
+                                                    </div>
+                                                    <div className="ml-4">
+                                                        <div className="text-sm font-medium text-gray-900">
+                                                            {file.file_name}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="flex items-center">
+                                                    <User className="w-4 h-4 text-gray-400 mr-2" />
+                                                    <div>
+                                                        <div className="text-sm font-medium text-gray-900">
+                                                            {file.employee_name || 'Unknown'}
+                                                        </div>
+                                                        <div className="text-sm text-gray-500">
+                                                            {file.employee_department} • {file.employee_job_title}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                                    {file.file_type.charAt(0).toUpperCase() + file.file_type.slice(1)}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                {formatFileSize(file.size)}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="text-sm text-gray-900 max-w-xs truncate">
+                                                    {file.description || 'No description'}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                {formatDate(file.uploaded_at)}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <button
+                                                    onClick={() => handleEdit(file)}
+                                                    className="text-blue-600 hover:text-blue-900 mr-3"
+                                                    title="Edit file"
+                                                >
+                                                    <Edit className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(file.id)}
+                                                    className="text-red-600 hover:text-red-900"
+                                                    title="Delete file"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
