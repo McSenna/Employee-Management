@@ -69,7 +69,7 @@ function uploadFile() {
         $relative_path = 'uploads/employees/' . $employee_id . '/' . $new_file_name;
         
         $stmt->bind_param("issssss", 
-            $employee_id, 
+            $employee_id,
             $file_name, 
             $relative_path, 
             $file_type, 
@@ -209,5 +209,52 @@ function deleteFile() {
     }
     
     $stmt->close();
+}
+
+function toggleFileStatus() {
+    global $connect;
+    $res = ['error' => false];
+    
+    try {
+        if (!isset($_POST['file_id'])) {
+            throw new Exception('File ID is required');
+        }
+        
+        $file_id = $_POST['file_id'];
+        
+        // First, check current status
+        $checkStmt = $connect->prepare("SELECT is_active FROM employee_files WHERE id = ?");
+        $checkStmt->bind_param("i", $file_id);
+        $checkStmt->execute();
+        $result = $checkStmt->get_result();
+        $file = $result->fetch_assoc();
+        $checkStmt->close();
+        
+        if (!$file) {
+            throw new Exception('File not found');
+        }
+        
+        // Toggle the status
+        $newStatus = $file['is_active'] ? 0 : 1;
+        
+        $updateStmt = $connect->prepare("UPDATE employee_files SET is_active = ? WHERE id = ?");
+        $updateStmt->bind_param("ii", $newStatus, $file_id);
+        
+        if ($updateStmt->execute()) {
+            $res['success'] = true;
+            $res['is_active'] = $newStatus;
+            $res['message'] = $newStatus ? 'File enabled successfully' : 'File disabled successfully';
+        } else {
+            throw new Exception('Failed to update file status');
+        }
+        
+        $updateStmt->close();
+        
+    } catch (Exception $e) {
+        $res['error'] = true;
+        $res['message'] = $e->getMessage();
+    }
+    
+    echo json_encode($res);
 }
 ?>

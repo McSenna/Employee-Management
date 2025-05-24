@@ -37,10 +37,30 @@ switch($action) {
         include './pages/delete.php';
         deleteEmployee();
         break;
+
+    case 'toggle_employee_status':
+        include './pages/toggle_employee_status.php';
+        toggleEmployeeStatus();
+        break;
         
     case 'get_profile':
         include './pages/get_user_profile.php';
         get_user_profile();
+        break;
+
+    case 'update_profile':
+        include './pages/update_profile.php';
+        update_profile();
+        break;
+
+    case 'fetch_hr_stats':
+        include './pages/fetch_hr_stats.php';
+        fetch_hr_stats();
+        break;
+
+    case 'fetch_admin_stats':
+        include './pages/fetch_admin_stats.php';
+        fetch_admin_stats();
         break;
 
     case 'upload_file':
@@ -61,6 +81,11 @@ switch($action) {
     case 'delete_file':
         include './pages/file_operations.php';
         deleteFile();
+        break;
+
+    case 'toggle_file_status':
+        include './pages/file_operations.php';
+        toggleFileStatus();
         break;
 
     case 'fetchfiles':
